@@ -99,14 +99,14 @@
 #define E1_DIR_PIN                            63
 #define E1_ENABLE_PIN                         65
 #ifndef E1_CS_PIN
-  #define E1_CS_PIN                           33
+  #define E1_CS_PIN                           -1 //disable pin
 #endif
 
 #define E2_STEP_PIN                           51
 #define E2_DIR_PIN                            53
 #define E2_ENABLE_PIN                         49
 #ifndef E2_CS_PIN
-  #define E2_CS_PIN                           35
+  #define E2_CS_PIN                           -1 //disable pin
 #endif
 
 /**
@@ -172,8 +172,8 @@
 //
 // Temperature Sensors
 //
-#define TEMP_0_PIN                             0  // Analog Input
-#define TEMP_1_PIN                             1  // Analog Input
+#define TEMP_0_PIN                             0  // Analog Input RX0
+#define TEMP_1_PIN                             1  // Analog Input TX0
 #define TEMP_2_PIN                             2  // Analog Input
 #define TEMP_3_PIN                             3  // Analog Input
 #define TEMP_4_PIN                             5  // dummy so will compile when PINS_DEBUGGING is enabled
@@ -197,9 +197,9 @@
 #endif
 
 #ifndef FAN_PIN
-  #define FAN_PIN                              9
+  #define FAN_PIN                              9  //Cooling_fan
 #endif
-#define FAN1_PIN                               8
+#define FAN1_PIN                               8  //Extruder_fan
 
 //
 // Misc. Functions
