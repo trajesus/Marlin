@@ -33,20 +33,22 @@
   #include "../lcd/e3v2/proui/dwin.h"
 #endif
 
+#define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
+#include "../core/debug_out.h"
+
 #if HAS_BED_PROBE
   enum ProbePtRaise : uint8_t {
     PROBE_PT_NONE,      // No raise or stow after run_z_probe
     PROBE_PT_STOW,      // Do a complete stow after run_z_probe
     PROBE_PT_LAST_STOW, // Stow for sure, even in BLTouch HS mode
-    PROBE_PT_RAISE,     // Raise to "between" clearance after run_z_probe
-    PROBE_PT_BIG_RAISE  // Raise to big clearance after run_z_probe
+    PROBE_PT_RAISE      // Raise to "between" clearance after run_z_probe
   };
 #endif
 
 #if USES_Z_MIN_PROBE_PIN
-  #define PROBE_TRIGGERED() (READ(Z_MIN_PROBE_PIN) != Z_MIN_PROBE_ENDSTOP_INVERTING)
+  #define PROBE_TRIGGERED() (READ(Z_MIN_PROBE_PIN) == Z_MIN_PROBE_ENDSTOP_HIT_STATE)
 #else
-  #define PROBE_TRIGGERED() (READ(Z_MIN_PIN) != Z_MIN_ENDSTOP_INVERTING)
+  #define PROBE_TRIGGERED() (READ(Z_MIN_PIN) == Z_MIN_ENDSTOP_HIT_STATE)
 #endif
 
 #if ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING)
@@ -58,6 +60,9 @@
 #else
   #define Z_POST_CLEARANCE 10
 #endif
+
+// In BLTOUCH HS mode, the probe travels in a deployed state.
+#define Z_PROBE_SAFE_CLEARANCE SUM_TERN(BLTOUCH, Z_CLEARANCE_BETWEEN_PROBES, bltouch.z_extra_clearance())
 
 #if ENABLED(PREHEAT_BEFORE_LEVELING)
   #ifndef LEVELING_NOZZLE_TEMP
@@ -168,11 +173,6 @@ public:
 
     #endif // !IS_KINEMATIC
 
-    static void move_z_after_probing() {
-      #ifdef Z_AFTER_PROBING
-        do_z_clearance(Z_AFTER_PROBING, true); // Move down still permitted
-      #endif
-    }
     static float probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRaise raise_after=PROBE_PT_NONE, const uint8_t verbose_level=0, const bool probe_relative=true, const bool sanity_check=true);
     static float probe_at_point(const xy_pos_t &pos, const ProbePtRaise raise_after=PROBE_PT_NONE, const uint8_t verbose_level=0, const bool probe_relative=true, const bool sanity_check=true) {
       return probe_at_point(pos.x, pos.y, raise_after, verbose_level, probe_relative, sanity_check);
@@ -188,9 +188,19 @@ public:
 
   #endif // !HAS_BED_PROBE
 
+  static void use_probing_tool(const bool=true) IF_DISABLED(DO_TOOLCHANGE_FOR_PROBING, {});
+
+  #ifndef Z_AFTER_PROBING
+    #define Z_AFTER_PROBING 0
+  #endif
+  static void move_z_after_probing(const float z=Z_AFTER_PROBING) {
+    DEBUG_SECTION(mzah, "move_z_after_probing", DEBUGGING(LEVELING));
+    if (z != 0) do_z_clearance(z, true, true); // Move down still permitted
+  }
   static void move_z_after_homing() {
-    #if ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING) || defined(Z_AFTER_HOMING)
-      do_z_clearance(Z_POST_CLEARANCE, true);
+    DEBUG_SECTION(mzah, "move_z_after_homing", DEBUGGING(LEVELING));
+    #if defined(Z_AFTER_HOMING) || ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING)
+      move_z_after_probing(Z_POST_CLEARANCE);
     #elif HAS_BED_PROBE
       move_z_after_probing();
     #endif
@@ -308,9 +318,9 @@ public:
             points[1] = xy_float_t({ (X_CENTER) + probe_radius() * COS120, (Y_CENTER) + probe_radius() * SIN120 });
             points[2] = xy_float_t({ (X_CENTER) + probe_radius() * COS240, (Y_CENTER) + probe_radius() * SIN240 });
           #elif ENABLED(AUTO_BED_LEVELING_UBL)
-            points[0] = xy_float_t({ _MAX(MESH_MIN_X, min_x()), _MAX(MESH_MIN_Y, min_y()) });
-            points[1] = xy_float_t({ _MIN(MESH_MAX_X, max_x()), _MAX(MESH_MIN_Y, min_y()) });
-            points[2] = xy_float_t({ (_MAX(MESH_MIN_X, min_x()) + _MIN(MESH_MAX_X, max_x())) / 2, _MIN(MESH_MAX_Y, max_y()) });
+            points[0] = xy_float_t({ _MAX(float(MESH_MIN_X), min_x()), _MAX(float(MESH_MIN_Y), min_y()) });
+            points[1] = xy_float_t({ _MIN(float(MESH_MAX_X), max_x()), _MAX(float(MESH_MIN_Y), min_y()) });
+            points[2] = xy_float_t({ (_MAX(float(MESH_MIN_X), min_x()) + _MIN(float(MESH_MAX_X), max_x())) / 2, _MIN(float(MESH_MAX_Y), max_y()) });
           #else
             points[0] = xy_float_t({ min_x(), min_y() });
             points[1] = xy_float_t({ max_x(), min_y() });
@@ -343,7 +353,6 @@ public:
 
 private:
   static bool probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s);
-  static void do_z_raise(const float z_raise);
   static float run_z_probe(const bool sanity_check=true);
 };
 
