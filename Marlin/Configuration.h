@@ -1225,7 +1225,7 @@
  * Override with M92
  *                                      X, Y, Z [, I [, J [, K...]]], E0 [, E1[, E2...]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 100, 100, 400, 400 } //change later for orbiter
+#define DEFAULT_AXIS_STEPS_PER_UNIT   { 160, 160, 800, 1380 } //change later for orbiter 100/100/400/400 690 e orbiter
 
 /**
  * Default Max Feed Rate (linear=mm/s, rotational=°/s)
