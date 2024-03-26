@@ -79,7 +79,7 @@ void say_shaping() {
       SERIAL_ECHO_TERNARY(dynamic, "X/A ", "base dynamic", "static", " compensator frequency: ");
       SERIAL_ECHO(p_float_t(ftMotion.cfg.baseFreq[X_AXIS], 2), F("Hz"));
       #if HAS_DYNAMIC_FREQ
-        if (dynamic) SERIAL_ECHO(" scaling: ", p_float_t(ftMotion.cfg.dynFreqK[X_AXIS], 8), F("Hz/"), z_based ? F("mm") : F("g"));
+        if (dynamic) SERIAL_ECHO(F(" scaling: "), p_float_t(ftMotion.cfg.dynFreqK[X_AXIS], 2), F("Hz/"), z_based ? F("mm") : F("g"));
       #endif
       SERIAL_EOL();
     #endif
@@ -88,7 +88,7 @@ void say_shaping() {
       SERIAL_ECHO_TERNARY(dynamic, "Y/B ", "base dynamic", "static", " compensator frequency: ");
       SERIAL_ECHO(p_float_t(ftMotion.cfg.baseFreq[Y_AXIS], 2), F(" Hz"));
       #if HAS_DYNAMIC_FREQ
-        if (dynamic) SERIAL_ECHO(F(" scaling: "), p_float_t(ftMotion.cfg.dynFreqK[Y_AXIS], 8), F("Hz/"), z_based ? F("mm") : F("g"));
+        if (dynamic) SERIAL_ECHO(F(" scaling: "), p_float_t(ftMotion.cfg.dynFreqK[Y_AXIS], 2), F("Hz/"), z_based ? F("mm") : F("g"));
       #endif
       SERIAL_EOL();
     #endif
@@ -96,11 +96,16 @@ void say_shaping() {
 
   #if HAS_EXTRUDERS
     SERIAL_ECHO_TERNARY(ftMotion.cfg.linearAdvEna, "Linear Advance ", "en", "dis", "abled");
-    SERIAL_ECHOLN(F(". Gain: "), p_float_t(ftMotion.cfg.linearAdvK, 5));
+    if (ftMotion.cfg.linearAdvEna)
+      SERIAL_ECHOLNPGM(". Gain: ", ftMotion.cfg.linearAdvK);
+    else
+      SERIAL_EOL();
   #endif
 }
 
 void GcodeSuite::M493_report(const bool forReplay/*=true*/) {
+  TERN_(MARLIN_SMALL_BUILD, return);
+
   report_heading_etc(forReplay, F(STR_FT_MOTION));
   const ft_config_t &c = ftMotion.cfg;
   SERIAL_ECHOPGM("  M493 S", c.mode);
